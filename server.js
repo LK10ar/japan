@@ -56,15 +56,27 @@ app.post('/api/register', async (req, res) => {
 
 // Connexion
 app.post('/api/login', async (req, res) => {
-    const user = await User.findOne({ username: req.body.username });
-    if (!user) return res.status(400).send('Utilisateur non trouvé');
+    try {
+        const user = await User.findOne({ username: req.body.username });
+        if (!user) return res.status(400).send('Utilisateur non trouvé');
 
-    const validPass = await bcrypt.compare(req.body.password, user.password);
-    if (!validPass) return res.status(400).send('Mot de passe incorrect');
+        const validPass = await bcrypt.compare(req.body.password, user.password);
+        if (!validPass) return res.status(400).send('Mot de passe incorrect');
 
-    // Créer le token (le badge de session)
-    const token = jwt.sign({ _id: user._id, name: user.username }, process.env.TOKEN_SECRET);
-    res.header('auth-token', token).send({ token: token, username: user.username });
+        // Vérification de sécurité pour éviter le crash !
+        if (!process.env.TOKEN_SECRET) {
+            console.error("🚨 ERREUR CRITIQUE: TOKEN_SECRET n'est pas défini sur Render !");
+            return res.status(500).send("Le serveur n'a pas de clé secrète configurée.");
+        }
+
+        // Créer le token (le badge de session)
+        const token = jwt.sign({ _id: user._id, name: user.username }, process.env.TOKEN_SECRET);
+        res.header('auth-token', token).send({ token: token, username: user.username });
+        
+    } catch (error) {
+        console.error("Erreur de connexion :", error);
+        res.status(500).send("Erreur interne du serveur lors de la connexion.");
+    }
 });
 
 // 4. ROUTES ROADTRIP (SÉCURISÉES)
