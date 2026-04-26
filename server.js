@@ -1,87 +1,82 @@
 // --- server.js ---
-require('dotenv').config(); // Pour lire le fichier .env
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs'); // Pour le hachage
+const jwt = require('jsonwebtoken'); // Pour la session
 
 const app = express();
-const port = process.env.PORT || 3000;
-
 app.use(cors());
 app.use(express.json());
 
-// 1. CONNEXION À MONGODB
-// L'adresse de ta base de données sera stockée dans une variable secrète (MONGO_URI)
-mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log("✅ Connecté à la base de données MongoDB Atlas !"))
-.catch(err => console.error("❌ Erreur de connexion MongoDB :", err));
+mongoose.connect(process.env.MONGO_URI);
 
-// 2. CRÉATION DU MODÈLE DE DONNÉES (Le schéma)
-// On explique à MongoDB à quoi ressemble une "étape" de ton roadtrip
-const EtapeSchema = new mongoose.Schema({
-    nom: String,
-    lat: Number,
-    lng: Number,
-    type: String,
-    statut: String
+// 1. MODÈLE UTILISATEUR
+const UserSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    etapes: [] // Le roadtrip est stocké directement dans l'utilisateur
 });
+const User = mongoose.model('User', UserSchema);
 
-// On crée le modèle "Itineraire" qui contiendra un tableau de ces étapes
-const ItineraireSchema = new mongoose.Schema({
-    userId: { type: String, default: "utilisateur_unique" }, // Pour plus tard, si tu as des comptes utilisateurs
-    etapes: [EtapeSchema]
-});
-
-const Itineraire = mongoose.model('Itineraire', ItineraireSchema);
-
-// 3. LES ROUTES API (Pour discuter avec ton frontend)
-
-// Route GET : Récupérer le roadtrip sauvegardé
-app.get('/api/roadtrip', async (req, res) => {
+// 2. MIDDLEWARE DE VÉRIFICATION (Sécurité)
+// Pour vérifier si l'utilisateur a le droit d'accéder à ses données
+const verifyToken = (req, res, next) => {
+    const token = req.header('auth-token');
+    if (!token) return res.status(401).send('Accès refusé');
     try {
-        // On cherche l'itinéraire de notre utilisateur (pour l'instant, on n'en a qu'un)
-        const monItineraire = await Itineraire.findOne({ userId: "utilisateur_unique" });
-        
-        if (monItineraire) {
-            res.json(monItineraire.etapes);
-        } else {
-            res.json([]); // Si rien n'est trouvé, on renvoie un tableau vide
-        }
-    } catch (error) {
-        console.error("Erreur GET:", error);
-        res.status(500).send("Erreur lors de la récupération des données.");
+        const verified = jwt.verify(token, process.env.TOKEN_SECRET);
+        req.user = verified;
+        next();
+    } catch (err) {
+        res.status(400).send('Token invalide');
+    }
+};
+
+// 3. ROUTES AUTHENTIFICATION
+
+// Inscription
+app.post('/api/register', async (req, res) => {
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(req.body.password, salt);
+
+    const user = new User({
+        username: req.body.username,
+        password: hashedPassword
+    });
+
+    try {
+        await user.save();
+        res.send({ message: "Compte créé ! Connecte-toi." });
+    } catch (err) {
+        res.status(400).send("Ce pseudo existe déjà.");
     }
 });
 
-// Route POST : Sauvegarder (ou mettre à jour) le roadtrip
-app.post('/api/roadtrip', async (req, res) => {
-    try {
-        const nouvellesEtapes = req.body;
+// Connexion
+app.post('/api/login', async (req, res) => {
+    const user = await User.findOne({ username: req.body.username });
+    if (!user) return res.status(400).send('Utilisateur non trouvé');
 
-        // On cherche si un itinéraire existe déjà
-        let monItineraire = await Itineraire.findOne({ userId: "utilisateur_unique" });
+    const validPass = await bcrypt.compare(req.body.password, user.password);
+    if (!validPass) return res.status(400).send('Mot de passe incorrect');
 
-        if (monItineraire) {
-            // S'il existe, on remplace les anciennes étapes par les nouvelles
-            monItineraire.etapes = nouvellesEtapes;
-            await monItineraire.save();
-        } else {
-            // S'il n'existe pas, on le crée
-            monItineraire = new Itineraire({
-                userId: "utilisateur_unique",
-                etapes: nouvellesEtapes
-            });
-            await monItineraire.save();
-        }
-
-        res.json({ message: 'Roadtrip sauvegardé dans MongoDB avec succès !' });
-    } catch (error) {
-        console.error("Erreur POST:", error);
-        res.status(500).send("Erreur lors de la sauvegarde des données.");
-    }
+    // Créer le token (le badge de session)
+    const token = jwt.sign({ _id: user._id, name: user.username }, process.env.TOKEN_SECRET);
+    res.header('auth-token', token).send({ token: token, username: user.username });
 });
 
-// Lancement du serveur
-app.listen(port, () => {
-    console.log(`🚀 Serveur en ligne sur le port ${port}`);
+// 4. ROUTES ROADTRIP (SÉCURISÉES)
+
+app.get('/api/roadtrip', verifyToken, async (req, res) => {
+    const user = await User.findById(req.user._id);
+    res.json(user.etapes);
 });
+
+app.post('/api/roadtrip', verifyToken, async (req, res) => {
+    await User.updateOne({ _id: req.user._id }, { etapes: req.body.etapes });
+    res.send('Roadtrip sauvegardé !');
+});
+
+app.listen(process.env.PORT || 3000);
