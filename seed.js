@@ -29,7 +29,9 @@ if (!match) {
 }
 const baseArticles = eval(match[1]); // fichier local et de confiance uniquement
 const nouvellesEntrees = require('./nouvelles-entrees.js');
-const toutesLesEntrees = [...baseArticles, ...nouvellesEntrees];
+const nouvellesEntrees2 = require('./nouvelles-entrees-2.js');
+const nouvellesEntrees3 = require('./nouvelles-entrees-3.js');
+const toutesLesEntrees = [...baseArticles, ...nouvellesEntrees, ...nouvellesEntrees2, ...nouvellesEntrees3];
 
 async function run() {
   await mongoose.connect(process.env.MONGO_URI);
