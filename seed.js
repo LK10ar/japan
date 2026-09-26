@@ -32,7 +32,8 @@ const nouvellesEntrees = require('./nouvelles-entrees.js');
 const nouvellesEntrees2 = require('./nouvelles-entrees-2.js');
 const nouvellesEntrees3 = require('./nouvelles-entrees-3.js');
 const nouvellesEntrees4 = require('./nouvelles-entrees-4.js');
-const toutesLesEntrees = [...baseArticles, ...nouvellesEntrees, ...nouvellesEntrees2, ...nouvellesEntrees3, ...nouvellesEntrees4];
+const nouvellesEntrees5 = require('./nouvelles-entrees-5.js');
+const toutesLesEntrees = [...baseArticles, ...nouvellesEntrees, ...nouvellesEntrees2, ...nouvellesEntrees3, ...nouvellesEntrees4, ...nouvellesEntrees5];
 
 async function run() {
   await mongoose.connect(process.env.MONGO_URI);
