@@ -91,10 +91,10 @@ const nouvellesEntrees = [
   // ============== ARTS JAPONAIS ==============
   { id: "cerimonie-the", categorie: "arts", titre: "La cérémonie du thé", sousTitre: "Sado, l'art du geste et du silence",
     desc: "Un rituel codifié où chaque geste compte, hérité du bouddhisme zen.",
-    img: "https://images.unsplash.com/photo-1536010263540-c0f4f2b32c7d?auto=format&fit=crop&w=1200&q=80" },
+    img: "https://commons.wikimedia.org/wiki/Special:FilePath/Outdoor%20Tea%20Ceremony.jpg" },
   { id: "kabuki", categorie: "arts", titre: "Le théâtre Kabuki", sousTitre: "Danse, chant et maquillage spectaculaire",
     desc: "Art dramatique traditionnel né au XVIIe siècle, reconnaissable à ses costumes et maquillages.",
-    img: "https://images.unsplash.com/photo-1610375461369-d613b564f4c4?auto=format&fit=crop&w=1200&q=80" },
+    img: "https://commons.wikimedia.org/wiki/Special:FilePath/Kabukiza1044.jpg" },
 
   // ============== LITTÉRATURE ==============
   { id: "haiku", categorie: "litterature", titre: "Le Haïku", sousTitre: "La poésie la plus courte du monde",
