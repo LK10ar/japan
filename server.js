@@ -85,6 +85,15 @@ const verifyToken = (req, res, next) => {
   }
 };
 
+// Seul le compte admin (toi) peut créer/modifier/supprimer du contenu (lieux, bons plans).
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'lk10';
+const verifyAdmin = (req, res, next) => {
+  if (req.user.username !== ADMIN_USERNAME) {
+    return res.status(403).send("Seul le compte administrateur peut faire ça.");
+  }
+  next();
+};
+
 // 4. AUTHENTIFICATION
 
 app.post('/api/register', async (req, res) => {
@@ -198,7 +207,7 @@ app.get('/api/lieux/:id', async (req, res) => {
   } catch (err) { res.status(500).send("Erreur serveur."); }
 });
 
-app.post('/api/lieux', verifyToken, async (req, res) => {
+app.post('/api/lieux', verifyToken, verifyAdmin, async (req, res) => {
   try {
     const existe = await Lieu.findOne({ id: req.body.id });
     if (existe) return res.status(400).send("Cet identifiant de lieu existe déjà.");
@@ -211,14 +220,14 @@ app.post('/api/lieux', verifyToken, async (req, res) => {
   }
 });
 
-app.put('/api/lieux/:id', verifyToken, async (req, res) => {
+app.put('/api/lieux/:id', verifyToken, verifyAdmin, async (req, res) => {
   try {
     await Lieu.updateOne({ id: req.params.id }, { $set: req.body });
     res.send({ message: "Lieu mis à jour." });
   } catch (err) { res.status(500).send("Erreur serveur."); }
 });
 
-app.delete('/api/lieux/:id', verifyToken, async (req, res) => {
+app.delete('/api/lieux/:id', verifyToken, verifyAdmin, async (req, res) => {
   try {
     await Lieu.deleteOne({ id: req.params.id });
     res.send({ message: "Lieu supprimé." });
@@ -235,7 +244,7 @@ app.get('/api/bonsplans', async (req, res) => {
   } catch (err) { res.status(500).send("Erreur serveur."); }
 });
 
-app.post('/api/bonsplans', verifyToken, async (req, res) => {
+app.post('/api/bonsplans', verifyToken, verifyAdmin, async (req, res) => {
   try {
     const plan = new BonPlan({ ...req.body, auteur: req.user.username });
     await plan.save();
@@ -243,7 +252,7 @@ app.post('/api/bonsplans', verifyToken, async (req, res) => {
   } catch (err) { res.status(500).send("Erreur lors de l'ajout."); }
 });
 
-app.delete('/api/bonsplans/:id', verifyToken, async (req, res) => {
+app.delete('/api/bonsplans/:id', verifyToken, verifyAdmin, async (req, res) => {
   try {
     await BonPlan.deleteOne({ _id: req.params.id });
     res.send({ message: "Bon plan supprimé." });

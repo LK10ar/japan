@@ -17,7 +17,7 @@ const LieuSchema = new mongoose.Schema({
   lng: Number,
   auteur: String,
   createdAt: { type: Date, default: Date.now }
-});
+}, { strict: false }); // strict:false = garde aussi blocs, galerie, p_trans, s_prix... (sinon ils sont supprimés)
 const Lieu = mongoose.model('Lieu', LieuSchema);
 
 // On charge data.js (qui définit `const baseArticles = [...]`) en isolant le tableau.
@@ -43,18 +43,7 @@ async function run() {
   for (const art of toutesLesEntrees) {
     const existe = await Lieu.findOne({ id: art.id });
     if (existe) { ignores++; continue; }
-    await Lieu.create({
-      id: art.id,
-      categorie: art.categorie,
-      titre: art.titre,
-      sousTitre: art.sousTitre,
-      desc: art.desc,
-      descLongue: art.descLongue,
-      img: art.img,
-      lat: art.lat,
-      lng: art.lng,
-      auteur: "seed"
-    });
+    await Lieu.create({ ...art, auteur: "seed" }); // on garde TOUS les champs (blocs, galerie, p_trans, s_prix...)
     ajoutes++;
   }
   console.log(`✅ Terminé : ${ajoutes} lieux ajoutés, ${ignores} déjà existants.`);
